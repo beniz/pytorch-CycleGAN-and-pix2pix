@@ -234,21 +234,28 @@ class CycleGANSemanticMaskModel(BaseModel):
             #self.gt_pred_B = pred_real_B.argmax(dim=d)
             
             self.pred_fake_A = self.netf_s(self.fake_A)
-            
             self.pfA = F.log_softmax(self.pred_fake_A,dim=d)#.argmax(dim=d)
             self.pfA_max = self.pfA.argmax(dim=d)
 
+            self.pred_fake_B = self.netf_s(self.fake_B)
+            self.pfB = F.log_softmax(self.pred_fake_B,dim=d)#.argmax(dim=d)
+            self.pfB_max = self.pfB.argmax(dim=d)
+            
             if hasattr(self,'criterionMask'):
-                label_A = self.input_A_label
-                label_A_in = label_A.unsqueeze(1)
-                label_A_inv = torch.tensor(np.ones(label_A.size())).to(self.device) - label_A
-                label_A_inv = label_A_inv.unsqueeze(1)
-                #label_A_inv = torch.cat ([label_A_inv,label_A_inv,label_A_inv],1)
+                #label_A = self.input_A_label
+                #label_A_inv = torch.tensor(np.ones(label_A.size())).to(self.device) - label_A
+                #label_A_inv = label_A_inv.unsqueeze(1)
+                label_B_pred = self.pfB_max
+                label_B_pred_inv = torch.tensor(np.ones(label_B_pred.size())).to(self.device) - label_B_pred
+                label_B_pred_inv = label_B_pred_inv.unsqueeze(1)
                 
-                self.real_A_out_mask = self.real_A *label_A_inv
-                self.fake_B_out_mask = self.fake_B *label_A_inv
-
+                #self.real_A_out_mask = self.real_A * label_A_inv
+                self.real_A_out_mask = self.real_A * label_B_pred_inv
+                #self.fake_B_out_mask = self.fake_B * label_A_inv
+                self.fake_B_out_mask = self.fake_B * label_B_pred_inv
+                
                 if self.disc_in_mask:
+                    label_A_in = label_A.unsqueeze(1)
                     self.real_A_mask_in = self.real_A * label_A_in
                     self.fake_B_mask_in = self.fake_B * label_A_in
                     self.real_A_mask = self.real_A #* label_A_in + self.real_A_out_mask
@@ -265,14 +272,17 @@ class CycleGANSemanticMaskModel(BaseModel):
                 if hasattr(self, 'input_B_label'):
                 
                     label_B = self.input_B_label
-                    label_B_in = label_B.unsqueeze(1)
                     label_B_inv = torch.tensor(np.ones(label_B.size())).to(self.device) - label_B
                     label_B_inv = label_B_inv.unsqueeze(1)
-                    #label_B_inv = torch.cat ([label_B_inv,label_B_inv,label_B_inv],1)
+                    #label_A_pred = self.pfA_max
+                    #label_A_pred_inv = torch.tensor(np.ones(label_A_pred.size())).to(self.device) - label_A_pred
+                    label_A_pred_inv = label_A_pred_inv.unsqueeze(1)
                     
                     self.real_B_out_mask = self.real_B *label_B_inv
+                    #self.real_B_out_mask = self.real_B * label_A_pred_inv
                     self.fake_A_out_mask = self.fake_A *label_B_inv
                     if self.disc_in_mask:
+                        label_B_in = label_B.unsqueeze(1)
                         self.real_B_mask_in = self.real_B * label_B_in
                         self.fake_A_mask_in = self.fake_A * label_B_in
                         self.real_B_mask = self.real_B #* label_B_in + self.real_B_out_mask
@@ -285,10 +295,6 @@ class CycleGANSemanticMaskModel(BaseModel):
                         #self.fake_A_mask_in = self.aug_seq(self.fake_A_mask_in)
                         #self.real_B_mask = self.aug_seq(self.real_B_mask)
                         #self.fake_A_mask = self.aug_seq(self.fake_A_mask)
-                        
-        self.pred_fake_B = self.netf_s(self.fake_B)
-        self.pfB = F.log_softmax(self.pred_fake_B,dim=d)#.argmax(dim=d)
-        self.pfB_max = self.pfB.argmax(dim=d)
 
 
            
