@@ -425,7 +425,7 @@ class ResnetGenerator(nn.Module):
             #bpoints += resblockl
             model += resblockl
             self.bpoints += resblockl
-            
+
         if self.decoder:
             for i in range(n_downsampling):  # add upsampling layers
                 mult = 2 ** (n_downsampling - i)
@@ -459,8 +459,8 @@ class ResnetGenerator(nn.Module):
                 #    )
                 #self.to_w = nn.Sequential(*wlayers)
             else:
-                n_feat = 1024 # 256 with mpool
-                n_feat = 2**(2*int(math.log(img_size,2)-2))
+                #n_feat = 1024 # 256 with mpool
+                n_feat = 2**(2*int(math.log(img_size,2)-2)) # 1024
                 self.n_wplus = (2*int(math.log(img_size,2)-1))
                 self.wblocks = nn.ModuleList()
                 for n in range(0,self.n_wplus):
@@ -479,9 +479,7 @@ class ResnetGenerator(nn.Module):
             output = self.model(input)
         else:
             res_outputs = []
-            output_head = self.head(input)
-            #print('bpoints size=',len(self.bpoints))
-            output = output_head
+            output = self.head(input)
             for bp in self.bpoints:
                 output = (bp(output))
                 res_outputs.append(output)
@@ -693,12 +691,19 @@ class NBlock(nn.Module):
     def __init__(self, dim, n_feat, out_feat, init_type='normal', init_gain=0.02, gpu_ids=[]):
         super(NBlock, self).__init__()
         self.out_feat = out_feat
-        self.conv2d = nn.Conv2d(dim,1,kernel_size=1)
-        self.lin = nn.Linear(n_feat,out_feat**2)
-        n_block = []
-        n_block += [self.conv2d,nn.InstanceNorm2d(1),nn.Flatten(),self.lin]
-        self.n_block = init_net(nn.Sequential(*n_block), init_type, init_gain, gpu_ids)
-        
+        if out_feat <= 32: # size of input #TODO: other sizes
+            self.conv2d = nn.Conv2d(dim,1,kernel_size=1)
+            self.lin = nn.Linear(n_feat,out_feat**2)
+            n_block = []
+            n_block += [self.conv2d,nn.InstanceNorm2d(1),nn.Flatten(),self.lin]
+            self.n_block = init_net(nn.Sequential(*n_block), init_type, init_gain, gpu_ids)
+        else:
+            self.n_block = []
+            self.n_block += [nn.Upsample((out_feat,out_feat))]
+            self.n_block += [nn.Conv2d(256,1,kernel_size=1)]
+            self.n_block += [nn.Flatten()]
+            self.n_block = init_net(nn.Sequential(*self.n_block), init_type, init_gain, gpu_ids)
+                    
     def forward(self, x):
         out = self.n_block(x)
         return torch.reshape(out.unsqueeze(1),(1,1,self.out_feat,self.out_feat))
