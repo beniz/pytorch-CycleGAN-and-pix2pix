@@ -159,6 +159,6 @@ def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def gaussian(self, in_tensor, stddev):
+def gaussian(in_tensor, stddev):
     noisy_image = torch.normal(0, stddev, size=in_tensor.size()).to(in_tensor.device) + in_tensor
     return noisy_image
