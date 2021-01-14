@@ -1,4 +1,6 @@
-# JoliGAN
+![Logo](imgs/joligan.svg)
+
+
 ## Prerequisites
 - Linux or macOS
 - Python 3
